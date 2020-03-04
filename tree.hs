@@ -5,29 +5,22 @@ import Data.Ord
 type Abaco = ([Int], [Int])
 data Tree a = Folha a | Node [Tree a]  deriving Show
 
-
-delete1 _ [] = []
-delete1 p (y:ys)
-               | p == y = ys
-               | otherwise = y:(delete1 p ys)
-
 delete p ys = [y | y <- ys, y /= p]
 
 
 
-gmap :: Tree Abaco ->  Tree Abaco       
-gmap arv = case arv of 
-    (Folha x) -> Node $ f x 
-    (Node ns) -> Node [gmap n | n <- ns]
-    where
-        f (xs, ys) = [Folha $ sol xs ys p | p <- ys, cond xs p]        
-        sol xs ys p = (p:xs, delete p ys)
-        
-        cond xs p = and [p /= c + n  && p /= c - n | (c, n) <- zip xs [1..]]
+gmap :: (Abaco -> [Tree Abaco]) -> Tree Abaco -> Tree Abaco
+gmap func arv = case arv of 
+    (Folha x) -> Node $ func x 
+    (Node ns) -> Node [gmap func n | n <- ns]
+
+func (xs, ys) = [Folha $ sol xs ys p | p <- ys, cond xs p]        
+sol xs ys p = (p:xs, delete p ys)
+
+cond xs p = and [p /= c + n  && p /= c - n | (c, n) <- zip xs [1..]]
 
 
 
--- Para converter a arvore de solucoes em uma lista deles
 
 toList :: Tree Abaco -> [[Int]]
 toList (Folha x) = [fst x]
@@ -45,7 +38,7 @@ arv :: Int -> Tree Abaco
 arv n = arv' n  
     where
         arv' 0 = Folha ([], [1..n])
-        arv' x = gmap $ arv' $ x-1 
+        arv' x = gmap func $ arv' $ x-1 
 
 
 
