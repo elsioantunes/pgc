@@ -1,26 +1,23 @@
 import System.Process
 import Data.Ord
--- import Data.List
 
 type Abaco = ([Int], [Int])
 data Tree a = Folha a | Node [Tree a]  deriving Show
 
-delete p ys = [y | y <- ys, y /= p]
+class Factor f where
+    gmap :: (a -> f a) -> f a -> f a
 
-gmap :: (Abaco -> Tree Abaco) -> Tree Abaco -> Tree Abaco
-gmap func arv = case arv of 
-    (Folha x) -> func x 
-    (Node ns) -> Node $ fmap (gmap func) ns
+instance Factor Tree where
+    gmap f (Folha x) = f x 
+    gmap f (Node ns) = Node $ fmap (gmap f) ns
 
 
 func :: Abaco -> Tree Abaco
 func (xs, ys) = Node [Folha $ sol xs ys p | p <- ys, cond xs p]        
+
 sol xs ys p = (p:xs, delete p ys)
-
+delete p ys = [y | y <- ys, y /= p]
 cond xs p = and [p /= c + n  && p /= c - n | (c, n) <- zip xs [1..]]
-
-
-
 
 toList :: Tree Abaco -> [[Int]]
 toList (Folha x) = [fst x]
@@ -28,12 +25,10 @@ toList (Node []) = []
 toList (Node (n:ns)) =  toList n ++ (toList $ Node ns)
 
 
-
 -- tentei com foldl, com iterate e agora com cauda 
--- (deu no mesmo. assim pelo menos fica um cÃ³digo mais claro)
+-- (deu no mesmo. assim pelo menos fica um código mais claro)
 -- aplicar gmap a uma arvore, expande-lhe suas folhas. 
 -- temos que aplicar n vezes, onde n eh o tamanho do tabuleiro
-
 arv :: Int -> Tree Abaco
 arv n = arv' n  
     where
@@ -41,13 +36,10 @@ arv n = arv' n
         arv' x = gmap func $ arv' $ x-1 
 
 
-
 -- Um teste de velocidade 
 -- listando o numero de solucoes 
 -- pra cada tamanho de tabuleiro 
-
 teste = [length $ toList $ arv n | n <- [0..11]]
-
 
 
 
@@ -178,19 +170,3 @@ o comando acima produz >>
 
 
 
-
-
-
-{--
-
-data Arv a = Node a (Arv a) (Arv a) | Folha deriving Show
-
-instance Functor Arv where
-    fmap _ Folha = Folha
-    fmap f (Node x e d) = Node (f x) (fmap f e) (fmap f d)
-
-arv = Node 1 (Node 2 (Node 4 Folha (Node 2 Folha Folha)) Folha) (Node 3 (Node 2 Folha Folha) Folha)
-
-testeF = fmap (*2) arv
-
---}
