@@ -1,39 +1,41 @@
 import System.Process
 import Data.Ord
---------------------------------------------------------------------
+import Data.List
 
+--------------------------------------------------------------------
 -- As solucoes sao baseadas numa permutacao de inteiros 
 -- que eventualmente eu posso converter em outra coisa
 -- como a notacao algebrica do knight's tour
 type Perm = [Int]
 type Action = Int
-type ProblemRule = Perm -> Action -> Bool
+type ProblemRule = Perm -> [Int] -> Action -> Bool
 
 
 -- leaf-labeled rose tree
 data Tree a = Folha a | Node [Tree a]  deriving Show
 
--- estrutura para expandir ramificar uma arvore
-class Ramificator f where
-    gmap :: (a -> f a) -> f a -> f a
 
-instance Ramificator Tree where
-    gmap f (Folha x) = f x 
-    gmap f (Node ns) = Node $ fmap (gmap f) ns
-
--- Chamei de Soroban, mas isso deve ter um nome certo
-type Soroban = ([Int], [Int])
+-- Chamei de Abaco, mas isso deve ter um nome certo
+type Candidatos = [Int]
+type Escolhidos = [Int]
+type Abaco = (Escolhidos, Candidatos)
 
 
--- Dado uma folha contendo um Soroban (e a regra do problema), 
+-- operador para expandir ramificar uma arvore
+(-<) :: Tree t -> (t -> Tree a) -> Tree a
+(-<) (Folha x) f = f x 
+(-<) (Node ns) f = Node [n -< f | n <- ns]
+
+
+-- Dado uma folha contendo um Abaco (e a regra do problema), 
 -- retorno uma ramificacao de estados dele
---  ramifica :: Soroban -> Tree Soroban
-ramifica :: ProblemRule -> Soroban -> Tree Soroban
-ramifica regra (escolhidos, candidatos) = 
-    Node [Folha (sorobanUpdt act) | act <- candidatos, regra escolhidos act]
+--  ramifica :: Abaco -> Tree Abaco
+ramifica :: ProblemRule -> Abaco -> Tree Abaco
+ramifica regra (xs, ys) = 
+    Node [Folha (abacoUpdt act) | act <- ys, regra xs ys act]
     where
-        sorobanUpdt act = (act:escolhidos, delete act candidatos)
-        delete act candidatos = [a | a <- candidatos, a /= act]
+        abacoUpdt act = (act:xs, delete act ys)
+        delete act ys = [a | a <- ys, a /= act]
 
 
 --------------------------------------------------------------------
@@ -48,12 +50,37 @@ printSol (x:xs) = do
                printSol xs
 
 --------------------------------------------------------------------
+-- Layout 
+
+ch n = toEnum n :: Char
+od c = fromEnum c
+
+pQs _ [] = return ()
+pQs col m = do
+           print $ take col m
+           pQs col $ drop col m
+
+pAs ntab [] = return ()
+pAs ntab (x:xs) = do 
+              putStrLn $ unwords $ int2algeb <$> x
+              putStrLn ""
+              pAs ntab xs
+    where 
+        int2algeb n = [ch (p + 97), ch (q + 49)] ++ ", "
+            where (p, q) = divMod n ntab  
+
+--------------------------------------------------------------------
 main = do 
-        -- imprime 15 das 92 solucoes de nqueens 8
-        printSol $ take 15 $ nqueens 8
+        system "clear" -- linux
         
-        -- TODO:
-        -- imprime caminho do cavalo 
+        putStrLn "Imprime 15 das 92 solucoes de nqueens 8"
+        printSol $ take 15 $ nqueens 8
+        putStrLn ""
+        
+        putStrLn "imprime caminho do cavalo no tab 8x8"
+        pAs 8 $ take 1 $ cavalo 63
+        putStrLn ""
+        
         
         -- imprime quadrados magicos
 
@@ -70,28 +97,26 @@ main = do
 testeVelocidade = [length $ nqueens n | n <- [0..11]]
 
 
---------------------------------------------------------------------
--- tentei com foldl, com iterate e agora com cauda 
--- (deu no mesmo. assim pelo menos fica um código mais claro)
--- aplicar gmap a uma arvore, expande-lhe suas folhas (um nivel inteiro). 
--- temos que aplicar n vezes, onde n eh o tamanho do tabuleiro
--- nqueens :: Int -> Tree Soroban
-nqueens n = toList $ arvc n  
-    where
-        arvc 0 = Folha ([], [1..n])
-        arvc x = gmap (ramifica nqueensRule) $ arvc (x-1) 
-
 
 ----------------------------------------------------------------------
 ----------------------------------------------------------------------
 -- problemas que o algoritmo resolve
 -- n queens
 nqueensRule :: ProblemRule
-nqueensRule escolhidos p = and [p /= c + n  && p /= c - n | (c, n) <- zip escolhidos [1..]]
+nqueensRule escolhidos _ p = and [p /= c + n  && p /= c - n | (c, n) <- zip escolhidos [1..]]
 
-{---------------------------------------------------------------------- TODO
-cavalo [] _ _ _ = True
-cavalo (x:ss) ys p (ntab:_)
+-- aplicar gmap a uma arvore, expande-lhe suas folhas (um nivel inteiro). 
+-- temos que aplicar n vezes, onde n eh o tamanho do tabuleiro
+nqueens n = toList $ arvc n  
+    where
+        arvc 0 = Folha ([], [1..n])
+        arvc x = arvc (x-1) -< ramifica nqueensRule
+
+
+---------------------------------------------------------------------- 
+-- ProblemRule = Perm -> [Int] -> Action -> Bool
+cavaloRule  [] _ _ = True
+cavaloRule (x:ss) ys p 
                   | not $ valid x p = False
                   | p /= p' = False
                   | otherwise = True
@@ -99,14 +124,20 @@ cavalo (x:ss) ys p (ntab:_)
                where
                   valid k h = (a-c)*(a-c) + (b-d)*(b-d) == 5
                       where 
-                        ((a, b), (c, d)) = (divMod k ntab, divMod h ntab)
+                        ((a, b), (c, d)) = (divMod k 8, divMod h 8)
                  
                   -- Warnsdorff's Rule
                   p' = minimumBy criterio $ neigb x
                   neigb k = [h | h <- ys, valid k h]
                   criterio = comparing $ length . neigb
 
-----------------------------------------------------------------------
+cavalo n = toList $ arvc n  
+    where
+        arvc 0 = Folha ([], [1..n])
+        arvc x = arvc (x-1) -< ramifica cavaloRule
+
+
+{----------------------------------------------------------------------
 
 magic q _ p _ = renan $ length q
     where 
@@ -188,22 +219,22 @@ Node [
 
 {-- como funciona a coisa
 
--- um objeto que eu chamei de Soroban, que eh tipo um abaco
-type Soroban = ([Int], [Int])
+-- um objeto que eu chamei de Abaco, que eh tipo um abaco
+type Abaco = ([Int], [Int])
 
 -- uma arvore do tipo rose (sem complicacoes)
 data Tree a = Node a [Tree a] deriving Show
 
--- um no raiz, contendo um Soroban
-root :: Tree Soroban
+-- um no raiz, contendo um Abaco
+root :: Tree Abaco
 root = Node ([],[1..3]) []
 
 -- uma forma de expandir um no, gerando varios estados desse abaco
-expande :: Soroban -> Tree Soroban
+expande :: Abaco -> Tree Abaco
 expande (xs, ys) = Node ([], []) [Node (p:xs, delete p ys) [] | p <- ys]
 
 -- cada vez que eu percorro uma arvore, eu expando suas folhas
-percorre :: Tree Soroban -> Tree Soroban
+percorre :: Tree Abaco -> Tree Abaco
 percorre (Node n []) = expande n
 percorre (Node _ fls) = Node ([], []) [percorre f | f <- fls] 
 
