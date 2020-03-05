@@ -7,14 +7,14 @@ data Tree a = Folha a | Node [Tree a]  deriving Show
 
 delete p ys = [y | y <- ys, y /= p]
 
-
-
-gmap :: (Abaco -> [Tree Abaco]) -> Tree Abaco -> Tree Abaco
+gmap :: (Abaco -> Tree Abaco) -> Tree Abaco -> Tree Abaco
 gmap func arv = case arv of 
-    (Folha x) -> Node $ func x 
-    (Node ns) -> Node [gmap func n | n <- ns]
+    (Folha x) -> func x 
+    (Node ns) -> Node $ fmap (gmap func) ns
 
-func (xs, ys) = [Folha $ sol xs ys p | p <- ys, cond xs p]        
+
+func :: Abaco -> Tree Abaco
+func (xs, ys) = Node [Folha $ sol xs ys p | p <- ys, cond xs p]        
 sol xs ys p = (p:xs, delete p ys)
 
 cond xs p = and [p /= c + n  && p /= c - n | (c, n) <- zip xs [1..]]
