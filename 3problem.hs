@@ -44,13 +44,9 @@ toList (Folha x) = [fst x]
 toList (Node []) = []
 toList (Node (n:ns)) =  toList n ++ (toList $ Node ns)
 
-printSol [] = return ()
-printSol (x:xs) = do
-               print x
-               printSol xs
-
 --------------------------------------------------------------------
 -- Layout 
+--  ajuda a imprimir os resultados
 
 ch n = toEnum n :: Char
 od c = fromEnum c
@@ -60,13 +56,24 @@ pQs col m = do
            print $ take col m
            pQs col $ drop col m
 
+pMagic ntab [] = return ()
+pMagic ntab (x:xs) = do
+           putStrLn "  -- -- -- -- "
+           pQs 12  $ unwords $ tab <$> x
+           putStrLn "  -- -- -- -- "
+           pMagic ntab xs
+    where 
+        tab n 
+             | n < 10 = " " ++ show n
+             | otherwise = show n
+
 pAs ntab [] = return ()
 pAs ntab (x:xs) = do 
               putStrLn $ unwords $ int2algeb <$> x
               putStrLn ""
               pAs ntab xs
     where 
-        int2algeb n = [ch (p + 97), ch (q + 49)] ++ ", "
+        int2algeb n = [ch (p + 97), ch (q + 49)] ++ " -> "
             where (p, q) = divMod n ntab  
 
 --------------------------------------------------------------------
@@ -74,16 +81,18 @@ main = do
         system "clear" -- linux
         
         putStrLn "Imprime 15 das 92 solucoes de nqueens 8"
-        printSol $ take 15 $ nqueens 8
+        pQs 4 $ take 15 $ nqueens 8
         putStrLn ""
         
         putStrLn "imprime caminho do cavalo no tab 8x8"
         pAs 8 $ take 1 $ cavalo 63
         putStrLn ""
         
+        putStrLn "imprime quadrado magico 4x4"
+        putStrLn "(esse demora um pouco pra calcular. Wait 1m)"
+        pMagic 4 $ take 3 $ magic 16 
+        putStrLn ""
         
-        -- imprime quadrados magicos
-
                 
 --------------------------------------------------------------------
 -- Um teste de velocidade 
@@ -137,9 +146,9 @@ cavalo n = toList $ arvc n
         arvc x = arvc (x-1) -< ramifica cavaloRule
 
 
-{----------------------------------------------------------------------
+----------------------------------------------------------------------
 
-magic q _ p _ = renan $ length q
+magicRule q _ p = renan $ length q
     where 
         m a g i c = a+g+i+c == 34
         filip (_:_:c:_:_:f:_:_:i:_) = m c f i p
@@ -153,7 +162,12 @@ magic q _ p _ = renan $ length q
                 |(n == 13 || n == 14) = aline q
                 |otherwise = True
 
-----------------------------------------------------------------------}
+magic n = toList $ arvc n  
+    where
+        arvc 0 = Folha ([], [1..n])
+        arvc x = arvc (x-1) -< ramifica magicRule
+
+----------------------------------------------------------------------
 {--
 
 [1,1,0,0,2,10,4,40,92,352,724,2680] -- com foldl
