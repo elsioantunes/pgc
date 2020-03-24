@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
-data Arv a = No a [Arv a]
+-- data Arv a = No a [Arv a]
 type Split a = ([a], [a])
 
 splits :: Integral a => Split a -> [Split a] 
@@ -115,32 +115,4 @@ queen q = go [] q where
     go pilha (p:xs) 
         | and [p /= c + n  && p /= c - n | (c, n) <- zip pilha [1..]] = go (p:pilha) xs
         | otherwise = False
-
-----------------------------------------------------------------------    
-instance Foldable Arv where
-    foldr f x0 (No a ns) = 
-        foldr f x0 (a : concat (fmap (foldMap (\x -> [x])) ns))
-
-instance Functor Arv where
-    fmap f (No a ns) = No (f a) (fmap (fmap f) ns)
-
-instance Applicative Arv where
-    pure x = No x []
-    No f tfs <*> tx@(No x txs) =
-        No (f x) (map (f <$>) txs ++ map (<*> tx) tfs)
-
-instance Monad Arv where
-    -- (>>=)  :: m a -> (a -> m b) -> m b
-    -- return :: a -> m a
-    return = pure
-    No x ns >>= f = case f x of
-        No x' ns' -> No x' (ns' ++ map (>>= f) ns)
-
-instance Show a => Show (Arv a) where
-    show m = "\n\n" ++ (unlines $ go  m) ++ "\n\n"
-      where
-        go (No a ns) =  lines ("(" ++ show a ++ ")") ++ subtree ns
-        subtree [] = []
-        subtree [n] = " \x2502" : " \x2502" : (zipWith (++) (" \x2514\x2500" : repeat "    ") (go n))
-        subtree (n:ns) = " \x2502" : " \x2502" : (zipWith (++) (" \x251c\x2500" : repeat " \x2502  ") (go n)) ++ subtree ns
 
