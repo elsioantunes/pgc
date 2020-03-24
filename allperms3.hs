@@ -2,8 +2,48 @@
 data Arv a = No a [Arv a]
 type Split a = (a, [a])
 
+{-- Introducao 
+
+    Quero resolver com este codigo uma classe de problemas do tipo que
+    uma solucao eh a permutacao de k elementos. Por ex, as N colunas da
+    posicao de n damas num tabuleiro NxN; a sequencia de N² casas de um
+    tabuleiro NxN que representa o tour do movimento do cavalo que passa
+    por todas as casas; a permutacao dos numeros de 1 a N² quadrado de 
+    NxN celulas, conhecido como quadrado magico; 
+    
+    Este codigo, inicialmente, nao resolve problemas como por ex 8puzzle
+    ou rubik cube pois, a priori, a solucao nao se trata da premutacao
+    de um numero k de elementos (ou lances).
+    Futuramente, no entanto, faremos a ligacao entre estes problemas, pois
+    todos passam por uma busca em uma arvore.
+    
+    https://www.ime.usp.br/~pf/analise_de_algoritmos/aulas/NPcompleto.html
+--}
+
+
+{--
+    Comeco, portanto, com um metodo de obtencao de permutacoes em haskell
+--}
+
 split :: [a] -> Split a
 split (a:b) = (a, b)        
+
+{--
+    Deixei split separado de splits pra ficar mais claro o que esta sendo feito.
+    split separa o head do tail de uma lista recebida e coloca numa tupla.
+    splits faz isso varias vezes, devolvendo o head para o split anterior.
+    com efeito, retorna-se uma lista de splits onde o que é separado da lista 
+    a cada iteracao eh sequencialmente um dos itens dessa lista.
+    
+    ex: 
+    *Main> splits [1..5]
+    [(1,[2,3,4,5]),(2,[1,3,4,5]),(3,[1,2,4,5]),(4,[1,2,3,5]),(5,[1,2,3,4])]
+    
+    Esta lista nos ajudara a montar naodeterministicamente uma arvore cuja altura
+    eh o numero de elementos de uma lista e o caminho da raiz ate alguma folha eh uma 
+    permutacao desses elementos. 
+    
+--}
 
 splits :: [a] -> [Split a]
 splits [] = []
@@ -12,7 +52,7 @@ cauda (x:xs) = [(a,x:b) | (a, b) <- splits xs]
 
 perms :: [a] -> [Arv (Maybe a)]
 perms [] = []
-perms m = f <$> splits m where
+perms m = fmap f (splits m) where
     f(n, ns) = No (Just n) $ perms ns
 
 root :: [Arv (Maybe a)] -> Arv (Maybe a)
@@ -27,123 +67,41 @@ ftree (No (Just a) []) = [[a]]
 ftree (No (Just a) ns) = [a:n | n <- ftree (No Nothing ns)]
 
 -- Layout --------------------------------------------------------
-seed = [1..4]
-teste = printXs $ ftree $ build seed
+seed = [1..8]
+teste = length $ [ p | p <- ftree $ build seed, queen p]
 
-printXs m = go m where
-    go [] = return ()
-    go (x:xs) = do
-                 print x
-                 go xs
 
+----------------------------------------------------------------------    
+
+queen :: Integral a => [a] -> Bool
+queen q = go [] q where
+    go _ [] = True
+    go pilha (p:xs) 
+        | and [p /= c + n  && p /= c - n | (c, n) <- zip pilha [1..]] = go (p:pilha) xs
+        | otherwise = False
+
+----------------------------------------------------------------------    
 
 
 
 {---------------------------------------------------------------------
 
-então agora vc  tem como montar uma árvore que enumera todas as permutações
+9! = 362880
 
-agora vc precisa de uma função que gera a lista de todas as permutações, 
+com arvore (28.17 secs, 1,781,911,152 bytes)
 
-um processo de folding
-Preencha os três casos para essa função:
+com lista     (6.76 secs, 565,669,208 bytes)
 
-foldMyTree (Node Nothing xs)  = ??   :: (Arv (Maybe a)) -> [[a]]
-foldMyTree (Node (Just x) []) = ??
-foldMyTree (Node (Just x) xs) = ??
-
-no seu exemplo, ela vai gerar [[1,2,3,4,5], [1,2,3,5,4], [1,2,4,3,5],...]
-a ideia geral é que se teremos uma forma estruturada de gerar essa lista fazendo:
-
-foldMyTree (buildTree sementes)
-e aproveitamos a avaliação preguiçosa para buscar a solução 
-dentro dessa lista de listas sem gastar memória
-
-----------------------------------------------------------------------
-
-no caso da busca em profundidade, 
-você primeiro gera uma solução completa, avalia e, 
-se não for a solução, joga fora
+microsegundos com fat
 
 
-(Nothing)
- |
- |
- +--.(Just 1)
- |   |
- |   |
- |   +--.(Just 2)
- |   |   |
- |   |   |
- |   |   +--.(Just 3)
- |   |   |   |
- |   |   |   |
- |   |   |   `--.(Just 4)
- |   |   |
- |   |   |
- |   |   `--.(Just 4)
- |   |       |
- |   |       |
- |   |       `--.(Just 3)
- |   |
- |   |
- |   +--.(Just 3)
- |   |   |
- |   |   |
- |   |   +--.(Just 2)
- |   |   |   |
- |   |   |   |
- |   |   |   `--.(Just 4)
- |   |   |
- |   |   |
- |   |   `--.(Just 4)
- |   |       |
- |   |       |
- |   |       `--.(Just 2)
- |   |
- |   |
- |   `--.(Just 4)
- |       |
- |       |
- |       +--.(Just 2)
- |       |   |
- |       |   |
- |       |   `--.(Just 3)
- |       |
- |       |
- |       `--.(Just 3)
- |           |
- |           |
- |           `--.(Just 2)
- |
- |
- +--.(Just 2)
- |   |
- |   |
- |   +--.(Just 1)
- |   |   |
- |   |   |
- |   |   +--.(Just 3)
- |   |   |   |
- |   |   |   |
- |   |   |   `--.(Just 4)
- |   |   |
- |   |   |
- |   |   `--.(Just 4)
- |   |       |
- |   |       |
- |   |       `--.(Just 3)
- |   |
- |   |
- |   +--.(Just 3)
- |   |   |
- |   |   |
- |   |   +--.(Just 1)
- |   |   |   |
- |   |   |   |
- |   |   |   `--.(Just 4)
- 
- ... 
+
+
+nqueens 92 sol
+
+com arvore (5.63 secs, 395,820,608 bytes)
+com listas (0.70 secs,  45,607,720 bytes)
+
 
 --}
 
