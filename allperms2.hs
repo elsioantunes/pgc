@@ -1,26 +1,56 @@
-----------------------------------------------------------------------    
-data Arv a = No a [Arv a]
-type Split = (Int, [Int])
+{--
+    Este codigo imprime uma arvore que representa as permutacoes de uma lista de objetos
+    ftree recebe uma arvore e retorna uma lista de permutacoes registradas nessa arvore
+    
+    Diferentemente de allperms0, este codigo foi elaborado de acordo com as diretrizes do orientador
+    na proxima versao, allperms2b tera um predicado que limita a ramificacao da arvore de acordo com
+    um problema, por exemplo, 8queens.
+    
+    usage:  
+        build [1..3]
+    
+    return:
+        uma arvore bem bonita.
+        
+--}
 
-splits :: [Int] -> [Split]
+
+data Arv a = No a [Arv a]
+type Split a = (a, [a])
+
+splits :: [a] -> [Split a]
 splits [] = []
 splits (x:xs) = (x, xs) : [(a,x:b) | (a, b) <- splits xs]
 
-perms :: [Int] -> [Arv (Maybe Int)]
+perms :: [a] -> [Arv (Maybe a)]
 perms [] = []
 perms m = map f $ splits m where
     f (n, ns) = No (Just n) $ perms ns
 
-build :: [Int] -> Arv (Maybe Int)
+build :: [a] -> Arv (Maybe a)
 build = No Nothing . perms
 
 
 
+ftree :: Arv (Maybe a) -> [[a]]
+ftree (No Nothing ns) = concat [ftree n | n <- ns]
+ftree (No (Just a) []) = [[a]]
+ftree (No (Just a) ns) = [a:n | n <- ftree (No Nothing ns)]
 
 
 
 
-teste = build [1..3]
+-- Layout ------------------------------------------------------------
+teste = do
+          print $ build [1..3]
+          print $ ftree $ build [1..3]
+
+
+
+
+
+
+
 
 
 -- para imprimir a arvore --------------------------------------------
