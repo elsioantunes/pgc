@@ -1,10 +1,3 @@
-instance Show a => Show (Arv a) where
-    show m = "\n\n" ++ (unlines $ go  m) ++ "\n\n"
-      where
-        go (No a ns) =  lines ("[" ++ show a ++ "]") ++ subtree ns
-        subtree [] = []
-        subtree (n:ns) = " |" : " |" : (zipWith (++) (" +--." : repeat " |  ") (go n)) ++ subtree ns
-
 ----------------------------------------------------------------------    
 data Arv a = No a [Arv a]
 type Split = (Int, [Int])
@@ -16,9 +9,28 @@ splits (x:xs) = (x, xs) : [(a,x:b) | (a, b) <- splits xs]
 perms :: [Int] -> [Arv (Maybe Int)]
 perms [] = []
 perms m = map f $ splits m where
-    f (n, ns) = No (Just n) $ map f $ splits ns
+    f (n, ns) = No (Just n) $ perms ns
+
+build :: [Int] -> Arv (Maybe Int)
+build = No Nothing . perms
 
 
+
+
+
+
+
+teste = build [1..3]
+
+
+-- para imprimir a arvore --------------------------------------------
+instance Show a => Show (Arv a) where
+    show m = "\n\n" ++ (unlines $ go  m) ++ "\n\n"
+      where
+        go (No a ns) =  lines ("(" ++ show a ++ ")") ++ subtree ns
+        subtree [] = []
+        subtree [n] = " \x2502" : " \x2502" : (zipWith (++) (" \x2514\x2500" : repeat "    ") (go n))
+        subtree (n:ns) = " \x2502" : " \x2502" : (zipWith (++) (" \x251c\x2500" : repeat " \x2502  ") (go n)) ++ subtree ns
 {--
 
 *Main> perms [1..5]
