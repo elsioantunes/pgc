@@ -11,19 +11,10 @@ cauda :: Abaco -> [Abaco]
 cauda (a, p:b) = [(m, p:n) | (m, n) <- splits (a, b)]
 
 allperms :: [Int] -> [Abaco]
-allperms xs = 
-    go xs where
-    go [] = [([], xs)] 
-    go (_:count) = 
-        go count >>= splits
+allperms m = go m where
+    go [] = [([], m)] 
+    go (_:count) = go count >>= splits
 
-
-main = 
-    go (allperms [1..4]) where
-    go [] = return ()
-    go (x:xs) = do 
-                 print x
-                 go xs
-
-
+-----------------------------------------------------
+teste m = foldMap (\x -> print x) $ allperms m
 
