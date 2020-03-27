@@ -29,6 +29,7 @@ splits ab = ab : cauda ab
 cauda (x:xs) = [(a:x:b) | (a:b) <- splits xs]
 
 {--
+    Construcao da arvore.
     'perms' eh recursivo por intermedio de 'go'
     necessario para adm os parametros 'regra' e 'pilha'
 --}
